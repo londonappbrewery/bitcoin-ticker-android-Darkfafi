@@ -6,25 +6,26 @@ import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.Toast;
 
+import com.loopj.android.http.JsonHttpResponseHandler;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import cz.msebera.android.httpclient.Header;
 
 
-public class MainActivity extends AppCompatActivity {
-
-    // Constants:
-    // TODO: Create the base URL
-    private final String BASE_URL = "https://apiv2.bitcoin ...";
-
+public class MainActivity extends AppCompatActivity
+{
+    private final float LOADING_CURRENCY = -1337;
     // Member Variables:
     TextView mPriceTextView;
+    String currencyType = null;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -33,6 +34,7 @@ public class MainActivity extends AppCompatActivity {
 
         mPriceTextView = (TextView) findViewById(R.id.priceLabel);
         Spinner spinner = (Spinner) findViewById(R.id.currency_spinner);
+        Button buttonView = (Button)findViewById(R.id.button_refresh);
 
         // Create an ArrayAdapter using the String array and a spinner layout
         ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
@@ -45,35 +47,71 @@ public class MainActivity extends AppCompatActivity {
         spinner.setAdapter(adapter);
 
         // TODO: Set an OnItemSelected listener on the spinner
+        spinner.setOnItemSelectedListener(new OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                currencyType = parent.getItemAtPosition(position).toString();
+                updateUI(LOADING_CURRENCY, null);
+                doBitcoinDataRequest(currencyType);
+            }
+
+            @Override
+            public void onNothingSelected(AdapterView<?> parent) {
+
+            }
+        });
+
+        buttonView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(currencyType == null) { return; }
+                updateUI(LOADING_CURRENCY, null);
+                doBitcoinDataRequest(currencyType);
+            }
+        });
 
     }
 
     // TODO: complete the letsDoSomeNetworking() method
-    private void letsDoSomeNetworking(String url) {
+    private void doBitcoinDataRequest(final String currencyType)
+    {
+        BitcoinDataClient.getBitcoinData(currencyType, new JsonHttpResponseHandler() {
 
-//        AsyncHttpClient client = new AsyncHttpClient();
-//        client.get(WEATHER_URL, params, new JsonHttpResponseHandler() {
-//
-//            @Override
-//            public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
-//                // called when response HTTP status is "200 OK"
-//                Log.d("Clima", "JSON: " + response.toString());
-//                WeatherDataModel weatherData = WeatherDataModel.fromJson(response);
-//                updateUI(weatherData);
-//            }
-//
-//            @Override
-//            public void onFailure(int statusCode, Header[] headers, Throwable e, JSONObject response) {
-//                // called when response HTTP status is "4XX" (eg. 401, 403, 404)
-//                Log.d("Clima", "Request fail! Status code: " + statusCode);
-//                Log.d("Clima", "Fail response: " + response);
-//                Log.e("ERROR", e.toString());
-//                Toast.makeText(WeatherController.this, "Request Failed", Toast.LENGTH_SHORT).show();
-//            }
-//        });
+            @Override
+            public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+                try {
+                    float value = (float)response.getDouble("last");
+                    updateUI(value, currencyType);
+                }catch (JSONException e){
+                    e.printStackTrace();
+                }
+            }
 
+            @Override
+            public void onFailure(int statusCode, Header[] headers, Throwable throwable, JSONObject errorResponse) {
+                Log.e("Bitcoin", "Failed: " + throwable.toString());
+                Toast.makeText(MainActivity.this,"Loading Currency Failed.", Toast.LENGTH_SHORT).show();
+            }
 
+            @Override
+            public void onFailure(int statusCode, Header[] headers, String responseString, Throwable throwable) {
+                Log.e("Bitcoin", "Failed{2}: " + throwable.toString());
+                Toast.makeText(MainActivity.this,"Loading Currency Failed{2}.", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
+    private void updateUI(float amount, String currencyType)
+    {
+        String textToDisplay = getString(R.string.no_currency);
+        if(currencyType != null) {
+            textToDisplay = amount +" "+ currencyType;
+        }
+        else if(amount == LOADING_CURRENCY){
+            textToDisplay = getString(R.string.loading_currency);
+        }
+        Log.d("Bitcoin", amount  +" "+ LOADING_CURRENCY + " " + (amount  == LOADING_CURRENCY));
+        mPriceTextView.setText(textToDisplay);
+    }
 
 }

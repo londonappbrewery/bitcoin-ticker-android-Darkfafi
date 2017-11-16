@@ -5,6 +5,11 @@
     <string name="base">Base Currency</string>
     <string name="imageview_desc">Bitcoin Logo</string>
 
+
+    <string name="no_currency">No currency value found..</string>
+    <string name="loading_currency">Loading Currency Data..</string>
+    <string name="refresh_button">Refresh</string>
+
     <string-array name="currency_array">
         <item>AUD</item>
         <item>BRL</item>
